@@ -1,65 +1,77 @@
 import Head from 'next/head'
 import styles from '../styles/Home.module.css'
+import { Fragment } from "react";
+import { graphql } from '@octokit/graphql';
 
-export default function Home() {
+export default function Home({data}) {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Create Next App</title>
+        <title>The Composable Architecture Kit</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <main className={styles.main}>
         <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
+          {data.organization.name}
         </h1>
 
         <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
+          {data.organization.description}
         </p>
 
         <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+          {data.organization.repositories.nodes.map((repo, index) => {
+            return <Fragment>
+                <a href={repo.url} className={styles.card}>
+                <img src={repo.openGraphImageUrl}/>
+                <h3>{repo.name}</h3>
+                <p>{repo.description}</p>
+              </a>
+            </Fragment>
+          })}
         </div>
       </main>
 
       <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className={styles.logo} />
+        <a href="https://github.com/tcakit" target="_blank" rel="noopener noreferrer">
+          GitHub
         </a>
       </footer>
     </div>
   )
+}
+
+export async function getStaticProps(context) {
+  const data = await graphql(
+    `
+    {
+      organization(login: "tcakit") {
+        description
+        avatarUrl
+        name
+        twitterUsername
+        repositories(first: 20) {
+          nodes {
+            url
+            description
+            forkCount
+            stargazerCount
+            openGraphImageUrl
+            name
+          }
+        }
+      }
+    }
+    `,
+    {
+      headers: {
+        authorization: `token ${process.env.GITHUB_REPO_READ}`,
+      },
+    }
+  );
+  return {
+    props: {data:data},
+    revalidate: 8600,
+  }
 }
